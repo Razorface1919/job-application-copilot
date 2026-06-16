@@ -1,0 +1,788 @@
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&family=DM+Mono:wght@400;500&family=Epilogue:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d0d0f;--bg2:#131316;--bg3:#1a1a1f;
+  --surface:#18181d;--border:#2a2a33;--border2:#333340;
+  --ink:#e8e6e0;--ink2:#a8a6a0;--ink3:#666472;
+  --gold:#c9a84c;--gold2:#e8c97a;--gd:rgba(201,168,76,0.1);--gb:rgba(201,168,76,0.22);
+  --green:#4a9e6e;--grd:rgba(74,158,110,0.1);--grb:rgba(74,158,110,0.22);
+  --redd:rgba(192,57,43,0.1);--redb:rgba(192,57,43,0.22);
+  --blue:#4a7fc1;--bld:rgba(74,127,193,0.1);--blb:rgba(74,127,193,0.22);
+  --purple:#8b5cf6;--purpd:rgba(139,92,246,0.1);--purpb:rgba(139,92,246,0.22);
+  --r:6px;
+}
+body{font-family:'Epilogue',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;font-weight:300}
+.app{max-width:820px;margin:0 auto;padding:2.5rem 1.75rem 6rem}
+.header{margin-bottom:2.5rem;padding-bottom:2rem;border-bottom:1px solid var(--border)}
+.eyebrow{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold);margin-bottom:1rem;display:flex;align-items:center;gap:10px}
+.eyebrow::before{content:'';display:inline-block;width:24px;height:1px;background:var(--gold)}
+h1{font-family:'Playfair Display',serif;font-size:2.6rem;font-weight:700;line-height:1.1;color:var(--ink);margin-bottom:.6rem;letter-spacing:-.02em}
+h1 em{font-style:italic;font-weight:400;color:var(--gold2)}
+.sub{font-size:13px;color:var(--ink3);line-height:1.65;max-width:480px}
+.pills{display:flex;gap:6px;flex-wrap:wrap;margin-top:1.25rem}
+.pill{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.08em;padding:3px 10px;border-radius:2px;border:.5px solid;transition:all .3s}
+.p-idle{background:transparent;color:var(--ink3);border-color:var(--border)}
+.p-active{background:var(--gd);color:var(--gold2);border-color:var(--gb)}
+.p-done{background:var(--grd);color:var(--green);border-color:var(--grb)}
+.p-latex{background:var(--bld);color:var(--blue);border-color:var(--blb)}
+.p-intel{background:var(--purpd);color:var(--purple);border-color:var(--purpb)}
+.mode-badge{display:inline-flex;align-items:center;gap:6px;font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;padding:4px 10px;border-radius:3px;border:.5px solid;margin-top:.75rem}
+.mode-latex{background:var(--bld);color:var(--blue);border-color:var(--blb)}
+.mode-text{background:var(--gd);color:var(--gold2);border-color:var(--gb)}
+.prog-wrap{display:none;background:var(--surface);border:.5px solid var(--border);border-radius:var(--r);padding:.9rem 1.4rem;margin-bottom:2rem}
+.prog-inner{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.p-step{display:flex;align-items:center;gap:7px}
+.p-step:not(:last-child)::after{content:'→';color:var(--ink3);font-size:11px;margin:0 8px}
+.p-dot{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'DM Mono',monospace;font-size:9px;font-weight:500;border:1.5px solid;transition:all .3s}
+.p-dot.idle{background:var(--bg3);border-color:var(--border);color:var(--ink3)}
+.p-dot.active{background:var(--gd);border-color:var(--gold);color:var(--gold2)}
+.p-dot.done{background:var(--green);border-color:var(--green);color:#fff}
+.p-lbl{font-size:11px;transition:color .3s}
+.p-lbl.idle{color:var(--ink3)}.p-lbl.active{color:var(--ink);font-weight:500}.p-lbl.done{color:var(--green)}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;margin-bottom:1rem}
+.field{display:flex;flex-direction:column;gap:.4rem}
+.f-label{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink3);display:flex;align-items:center;justify-content:space-between}
+.num{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:50%;background:var(--gold);color:var(--bg);font-size:8px;font-weight:700}
+.badge-lx{font-family:'DM Mono',monospace;font-size:8px;padding:2px 7px;border-radius:2px;border:.5px solid var(--blb);background:var(--bld);color:var(--blue)}
+.badge-txt{font-family:'DM Mono',monospace;font-size:8px;padding:2px 7px;border-radius:2px;border:.5px solid var(--gb);background:var(--gd);color:var(--gold2)}
+textarea{font-family:'Epilogue',sans-serif;font-size:13px;font-weight:300;line-height:1.65;color:var(--ink);background:var(--surface);border:.5px solid var(--border);border-radius:var(--r);padding:.9rem 1rem;resize:vertical;min-height:200px;outline:none;width:100%;transition:border-color .2s,box-shadow .2s}
+textarea::placeholder{color:var(--ink3);font-size:12px}
+textarea:focus{border-color:var(--gb);box-shadow:0 0 0 3px var(--gd)}
+textarea:disabled{opacity:.35;cursor:not-allowed}
+#resumeInput.is-latex{font-family:'DM Mono',monospace;font-size:11px;color:#a8c4e8}
+.cc{font-family:'DM Mono',monospace;font-size:9px;color:var(--ink3);text-align:right}
+.action-row{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-top:.25rem}
+.hint{font-size:11.5px;color:var(--ink3)}
+.btn-primary{display:inline-flex;align-items:center;gap:8px;font-family:'Epilogue',sans-serif;font-size:13.5px;font-weight:500;color:var(--bg);background:var(--gold);border:none;border-radius:3px;padding:.7rem 1.5rem;cursor:pointer;transition:background .2s,transform .1s;white-space:nowrap}
+.btn-primary:hover{background:var(--gold2)}.btn-primary:active{transform:scale(.98)}
+.btn-primary:disabled{background:var(--border);color:var(--ink3);cursor:not-allowed}
+.arr{transition:transform .2s}.btn-primary:not(:disabled):hover .arr{transform:translateX(4px)}
+.err-bar{display:none;align-items:flex-start;gap:10px;background:var(--redd);border:.5px solid var(--redb);border-radius:var(--r);padding:.7rem 1rem;margin-top:.8rem;font-size:12.5px;color:#e87070}
+.err-bar.on{display:flex}
+.stages{margin-top:2rem;display:flex;flex-direction:column;gap:.875rem}
+.stage-card{background:var(--surface);border:.5px solid var(--border);border-radius:var(--r);overflow:hidden;animation:rise .32s ease}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.card-head{display:flex;align-items:center;justify-content:space-between;padding:.75rem 1.2rem;background:var(--bg3);border-bottom:.5px solid var(--border)}
+.card-head-l{display:flex;align-items:center;gap:9px}
+.c-tag{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;padding:2px 7px;border-radius:2px;border:.5px solid}
+.t-ats{background:var(--grd);color:var(--green);border-color:var(--grb)}
+.t-res{background:var(--bld);color:var(--blue);border-color:var(--blb)}
+.t-res-txt{background:var(--gd);color:var(--gold2);border-color:var(--gb)}
+.t-cov{background:var(--gd);color:var(--gold2);border-color:var(--gb)}
+.t-intel{background:var(--purpd);color:var(--purple);border-color:var(--purpb)}
+.c-title{font-size:13.5px;font-weight:500;color:var(--ink)}
+.c-status{font-family:'DM Mono',monospace;font-size:9px;color:var(--ink3)}
+.card-body{padding:1rem 1.2rem}
+.peek{font-family:'DM Mono',monospace;font-size:10.5px;line-height:1.7;color:var(--ink3);background:var(--bg2);border:.5px solid var(--border);border-radius:4px;padding:.7rem .875rem;margin-bottom:.875rem;max-height:90px;overflow-y:auto;white-space:pre-wrap;word-break:break-word}
+.btn-row{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.btn-send{font-family:'Epilogue',sans-serif;font-size:13px;font-weight:500;padding:.5rem 1.1rem;border-radius:3px;border:none;background:var(--gold);color:var(--bg);cursor:pointer}
+.btn-send:hover{background:var(--gold2)}
+.btn-ghost{font-family:'Epilogue',sans-serif;font-size:12.5px;padding:.5rem 1rem;border-radius:3px;border:.5px solid var(--border2);background:transparent;color:var(--ink2);cursor:pointer}
+.btn-ghost:hover{border-color:var(--ink2);color:var(--ink)}
+.btn-stop{font-family:'Epilogue',sans-serif;font-size:12px;padding:.45rem .875rem;border-radius:3px;border:.5px solid var(--redb);background:var(--redd);color:#e87070;cursor:pointer;margin-left:auto}
+.note{display:flex;gap:8px;align-items:flex-start;border-radius:4px;padding:.65rem .875rem;margin-bottom:.875rem;font-size:11.5px;line-height:1.55}
+.note-blue{background:var(--bld);border:.5px solid var(--blb);color:var(--ink2)}
+.note-blue strong{color:var(--blue);font-weight:500}
+.note-gold{background:var(--gd);border:.5px solid var(--gb);color:var(--ink2)}
+.note-gold strong{color:var(--gold2);font-weight:500}
+.note-teal{background:rgba(74,158,158,0.1);border:.5px solid rgba(74,158,158,0.3);color:var(--ink2)}
+.note-teal strong{color:#4a9e9e;font-weight:500}
+.hm{font-family:'DM Mono',monospace;font-size:10px;color:var(--ink3);margin-top:.5rem}
+.gate{border-radius:var(--r);padding:1.1rem 1.2rem;animation:rise .28s ease}
+.gate-green{background:var(--grd);border:.5px solid var(--grb)}
+.gate-purple{background:var(--purpd);border:.5px solid var(--purpb)}
+.gate-gold{background:var(--gd);border:.5px solid var(--gb)}
+.g-title{font-size:13px;font-weight:500;margin-bottom:.3rem}
+.g-green{color:#6ecf96}.g-purple{color:var(--purple)}.g-gold{color:var(--gold2)}
+.g-desc{font-size:12px;color:var(--ink2);line-height:1.6;margin-bottom:.875rem}
+.g-btns{display:flex;gap:7px;flex-wrap:wrap}
+.btn-yes{font-family:'Epilogue',sans-serif;font-size:13px;font-weight:500;padding:.5rem 1.1rem;border-radius:3px;border:none;background:var(--green);color:#fff;cursor:pointer}
+.btn-yes:hover{background:#3d8a5e}
+.btn-no{font-family:'Epilogue',sans-serif;font-size:12.5px;padding:.5rem 1rem;border-radius:3px;border:.5px solid var(--redb);background:var(--redd);color:#e87070;cursor:pointer}
+.la-lbl{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);margin-bottom:.4rem;display:flex;align-items:center;gap:7px}
+.la-bar{display:inline-block;width:3px;height:11px;border-radius:2px}
+.la-ta{font-family:'DM Mono',monospace;font-size:11px;line-height:1.65;color:#a8c4e8;background:#0a0e14;border:.5px solid var(--blb);border-radius:4px;padding:.875rem 1rem;min-height:120px;outline:none;width:100%;resize:vertical}
+.la-ta:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--bld)}
+.la-ta::placeholder{color:#2e3e52}
+.txt-ta{font-family:'Epilogue',sans-serif;font-size:12.5px;font-weight:300;line-height:1.7;color:var(--ink);background:var(--surface);border:.5px solid var(--gb);border-radius:4px;padding:.875rem 1rem;min-height:180px;outline:none;width:100%;resize:vertical}
+.txt-ta:focus{border-color:var(--gold);box-shadow:0 0 0 3px var(--gd)}
+.txt-ta::placeholder{color:var(--ink3);font-size:12px}
+.la-btns{display:flex;gap:7px;margin-top:.5rem;flex-wrap:wrap}
+.btn-render{font-family:'Epilogue',sans-serif;font-size:12.5px;font-weight:500;padding:.5rem 1rem;border-radius:3px;border:none;cursor:pointer}
+.br-blue{background:var(--blue);color:#fff}.br-blue:hover{background:#3a6aaa}
+.br-gold{background:var(--gold);color:var(--bg)}.br-gold:hover{background:var(--gold2)}
+.br-purple{background:var(--purple);color:#fff}.br-purple:hover{background:#7b4ef6}
+.br-teal{background:#4a9e9e;color:#fff}.br-teal:hover{background:#3a8e8e}
+.lx-wrap{margin-top:1rem;background:var(--bg2);border:.5px solid var(--border);border-radius:var(--r);overflow:hidden;animation:rise .28s ease}
+.lx-bar{display:flex;align-items:center;justify-content:space-between;padding:.45rem .875rem;background:var(--bg3);border-bottom:.5px solid var(--border)}
+.lx-lbl{font-family:'DM Mono',monospace;font-size:9.5px;color:var(--gold)}
+.lx-rendered{font-family:'Epilogue',sans-serif;font-size:12.5px;line-height:1.8;color:var(--ink2);padding:1.25rem 1.5rem;white-space:pre-wrap;max-height:460px;overflow-y:auto}
+.lx-raw-hdr{font-family:'DM Mono',monospace;font-size:10px;color:var(--ink3);padding:.5rem 1rem;background:var(--bg3);border-bottom:.5px solid var(--border)}
+.lx-raw-code{font-family:'DM Mono',monospace;font-size:10.5px;line-height:1.65;color:#a8c4e8;padding:1rem;white-space:pre-wrap;word-break:break-word;max-height:240px;overflow-y:auto;background:#0a0e14}
+.lx-badges{display:flex;flex-wrap:wrap;gap:5px;padding:.75rem 1rem;border-top:.5px solid var(--border);background:var(--bg3)}
+.lx-badge{font-family:'DM Mono',monospace;font-size:9px;padding:2px 8px;border-radius:2px;border:.5px solid}
+.b-pass{background:var(--grd);color:var(--green);border-color:var(--grb)}
+.b-fail{background:var(--redd);color:#e87070;border-color:var(--redb)}
+.b-info{background:rgba(74,158,158,0.1);color:#4a9e9e;border-color:rgba(74,158,158,0.3)}
+.txt-preview{margin-top:1rem;background:var(--bg2);border:.5px solid var(--gb);border-radius:var(--r);overflow:hidden;animation:rise .28s ease}
+.txt-preview-bar{display:flex;align-items:center;justify-content:space-between;padding:.45rem .875rem;background:var(--bg3);border-bottom:.5px solid var(--gb)}
+.txt-preview-lbl{font-family:'DM Mono',monospace;font-size:9.5px;color:var(--gold2)}
+.txt-preview-body{font-family:'Epilogue',sans-serif;font-size:12.5px;line-height:1.8;color:var(--ink2);padding:1.25rem 1.5rem;white-space:pre-wrap;max-height:460px;overflow-y:auto}
+.txt-preview-footer{display:flex;align-items:center;justify-content:flex-end;gap:8px;padding:.6rem .875rem;border-top:.5px solid var(--border);background:var(--bg3)}
+.mb{font-family:'DM Mono',monospace;font-size:9.5px;background:none;border-radius:2px;padding:2px 7px;cursor:pointer}
+.mb-blue{color:var(--blue);border:.5px solid var(--blb)}.mb-blue:hover{background:var(--bld)}
+.mb-gold{color:var(--gold);border:.5px solid var(--gb)}.mb-gold:hover{background:var(--gd)}
+.mb-purple{color:var(--purple);border:.5px solid var(--purpb)}.mb-purple:hover{background:var(--purpd)}
+.mb-muted{color:var(--ink3);border:.5px solid var(--border2)}.mb-muted:hover{background:var(--bg3)}
+.mb-teal{color:#4a9e9e;border:.5px solid rgba(74,158,158,0.3)}.mb-teal:hover{background:rgba(74,158,158,0.1)}
+.cov-ta{font-family:'Epilogue',sans-serif;font-size:12.5px;font-weight:300;line-height:1.7;color:var(--ink);background:var(--surface);border:.5px solid var(--gb);border-radius:4px;padding:.875rem 1rem;min-height:100px;outline:none;width:100%;resize:vertical}
+.cov-ta:focus{border-color:var(--gold);box-shadow:0 0 0 3px var(--gd)}
+.cov-ta::placeholder{color:var(--ink3);font-size:12px}
+.cov-display{background:var(--bg2);border:.5px solid var(--gb);border-radius:var(--r);overflow:hidden;animation:rise .28s ease;margin-top:.875rem}
+.cov-bar{display:flex;align-items:center;justify-content:space-between;padding:.5rem .875rem;background:var(--bg3);border-bottom:.5px solid var(--gb)}
+.cov-bar-lbl{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold)}
+.cov-body{padding:1.5rem;font-size:13px;line-height:1.9;color:var(--ink2);white-space:pre-wrap;max-height:340px;overflow-y:auto}
+.cov-footer{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.6rem .875rem;border-top:.5px solid var(--border);background:var(--bg3);flex-wrap:wrap}
+.cov-wc{font-family:'DM Mono',monospace;font-size:9px;color:var(--ink3)}
+.btn-dl{display:inline-flex;align-items:center;gap:7px;font-family:'Epilogue',sans-serif;font-size:12.5px;font-weight:500;padding:.5rem 1.1rem;border-radius:3px;border:.5px solid var(--gb);background:var(--gd);color:var(--gold2);cursor:pointer}
+.btn-dl:hover{background:rgba(201,168,76,.2)}
+.btn-dl:disabled{opacity:.5;cursor:not-allowed}
+.si-ta{font-family:'DM Mono',monospace;font-size:11px;line-height:1.65;color:var(--ink2);background:var(--surface);border:.5px solid var(--purpb);border-radius:4px;padding:.875rem 1rem;min-height:110px;outline:none;width:100%;resize:vertical}
+.si-ta:focus{border-color:var(--purple);box-shadow:0 0 0 3px var(--purpd)}
+.si-display{margin-top:1rem;background:var(--bg2);border:.5px solid var(--purpb);border-radius:var(--r);overflow:hidden;animation:rise .28s ease}
+.si-hdr{display:flex;align-items:center;justify-content:space-between;padding:.6rem 1rem;background:var(--bg3);border-bottom:.5px solid var(--purpb)}
+.si-hdr-lbl{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--purple)}
+.si-body{padding:1.25rem}
+.si-sec{margin-bottom:1.5rem}.si-sec:last-child{margin-bottom:0}
+.si-sec-head{display:flex;align-items:center;gap:8px;margin-bottom:.875rem;padding-bottom:.5rem;border-bottom:.5px solid var(--border)}
+.si-icon{width:20px;height:20px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:11px}
+.icon-gap{background:var(--redd);color:#e87070}.icon-pruned{background:var(--purpd);color:var(--purple)}.icon-bridge{background:var(--bld);color:var(--blue)}
+.si-sec-title{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase}
+.si-gap{color:#e87070}.si-pruned{color:var(--purple)}.si-bridge{color:var(--blue)}
+.si-count{font-family:'DM Mono',monospace;font-size:9px;color:var(--ink3);margin-left:auto}
+.gap-item{display:grid;grid-template-columns:auto 1fr;gap:0 .875rem;padding:.7rem 0;border-bottom:.5px solid var(--border)}
+.gap-item:last-child{border-bottom:none;padding-bottom:0}
+.gap-dot{width:6px;height:6px;border-radius:50%;background:#e87070;margin-top:7px}
+.gap-dot-blue{width:6px;height:6px;border-radius:50%;background:var(--blue);margin-top:7px}
+.gap-skill{font-size:12.5px;font-weight:500;color:var(--ink);grid-column:2}
+.gap-res{font-size:11.5px;color:var(--ink3);grid-column:2;margin-top:2px;line-height:1.5}
+.bridge-badge{display:inline-block;font-family:'DM Mono',monospace;font-size:9px;padding:2px 8px;border-radius:2px;background:var(--bld);border:.5px solid var(--blb);color:var(--blue);margin-top:4px;grid-column:2}
+.pruned-grid{display:flex;flex-wrap:wrap;gap:6px}
+.pruned-tag{font-size:11.5px;padding:3px 10px;border-radius:2px;border:.5px solid var(--purpb);background:var(--purpd);color:var(--purple)}
+.club-report{margin-top:.875rem;background:rgba(74,158,158,0.06);border:.5px solid rgba(74,158,158,0.25);border-radius:var(--r);padding:.875rem 1rem;animation:rise .28s ease}
+.club-report-hdr{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:#4a9e9e;margin-bottom:.5rem;display:flex;align-items:center;gap:7px}
+.club-item{font-size:11.5px;color:var(--ink2);padding:.3rem 0;border-bottom:.5px solid var(--border)}
+.club-item:last-child{border-bottom:none}
+.club-item strong{color:#4a9e9e}
+.done-box{background:var(--grd);border:.5px solid var(--grb);border-radius:var(--r);padding:1.5rem;animation:rise .32s ease;text-align:center}
+.done-box strong{display:block;font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;color:#6ecf96;margin-bottom:.3rem}
+.done-box p{font-size:12.5px;color:var(--ink2);line-height:1.6;margin-bottom:1.2rem}
+.btn-reset{display:inline-flex;align-items:center;gap:8px;font-family:'Epilogue',sans-serif;font-size:13px;font-weight:500;padding:.65rem 1.4rem;border-radius:3px;border:.5px solid var(--gb);background:var(--bg3);color:var(--gold2);cursor:pointer;transition:background .2s,border-color .2s}
+.btn-reset:hover{background:var(--gd);border-color:var(--gold)}
+.btn-reset:active{transform:scale(.98)}
+.reset-icon{font-size:14px;transition:transform .4s}
+.btn-reset:hover .reset-icon{transform:rotate(-180deg)}
+.stop-box{background:var(--surface);border:.5px solid var(--border);border-radius:var(--r);padding:1.5rem;text-align:center;animation:rise .32s ease}
+.stop-box strong{display:block;font-family:'Playfair Display',serif;font-size:1.2rem;font-weight:700;color:var(--ink);margin-bottom:.3rem}
+.stop-box p{font-size:12.5px;color:var(--ink2);line-height:1.6;margin-bottom:1.1rem}
+.btn-reset-muted{display:inline-flex;align-items:center;gap:8px;font-family:'Epilogue',sans-serif;font-size:13px;font-weight:500;padding:.6rem 1.3rem;border-radius:3px;border:.5px solid var(--border2);background:transparent;color:var(--ink2);cursor:pointer;transition:background .2s,border-color .2s}
+.btn-reset-muted:hover{background:var(--bg3);border-color:var(--ink3);color:var(--ink)}
+::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:var(--bg2)}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+@media(max-width:600px){.form-grid{grid-template-columns:1fr}.action-row{flex-direction:column;align-items:flex-start}h1{font-size:2.1rem}.prog-inner{flex-wrap:wrap;gap:6px}.p-step:not(:last-child)::after{display:none}}
+</style>
+
+<div class="app">
+  <div class="header">
+    <div class="eyebrow">AI-Powered · Built for Analysts · v12</div>
+    <h1>Job Application <em>Co-pilot</em></h1>
+    <p class="sub">Resume · Cover Letter · ATS Report · Skills Intelligence — dual-path workflow, LaTeX or plain text.</p>
+    <div class="pills">
+      <span class="pill p-idle" id="pill1">① ATS Report</span>
+      <span class="pill p-idle" id="pill2">② Resume</span>
+      <span class="pill p-idle" id="pill3">③ Skills Intelligence</span>
+      <span class="pill p-idle" id="pill4">④ Cover Letter</span>
+    </div>
+  </div>
+  <div class="prog-wrap" id="progWrap">
+    <div class="prog-inner">
+      <div class="p-step"><div class="p-dot idle" id="pd1">1</div><span class="p-lbl idle" id="pl1">ATS</span></div>
+      <div class="p-step"><div class="p-dot idle" id="pd2">2</div><span class="p-lbl idle" id="pl2">Resume</span></div>
+      <div class="p-step"><div class="p-dot idle" id="pd3">3</div><span class="p-lbl idle" id="pl3">Skills</span></div>
+      <div class="p-step"><div class="p-dot idle" id="pd4">4</div><span class="p-lbl idle" id="pl4">Cover</span></div>
+    </div>
+  </div>
+  <div id="inputForm">
+    <div class="form-grid">
+      <div class="field">
+        <label class="f-label">
+          <span style="display:flex;align-items:center;gap:6px"><span class="num">1</span> Resume</span>
+          <span id="inputModeBadge" class="badge-txt">Plain Text</span>
+        </label>
+        <textarea id="resumeInput" placeholder="Paste your resume — LaTeX source (\documentclass…) or plain text. The tool auto-detects the format." oninput="onResumeInput()"></textarea>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span id="modeIndicator" style="font-family:'DM Mono',monospace;font-size:9px;color:var(--ink3)">Waiting for input…</span>
+          <div class="cc" id="rc">0 chars</div>
+        </div>
+      </div>
+      <div class="field">
+        <label class="f-label"><span style="display:flex;align-items:center;gap:6px"><span class="num">2</span> Job Description</span></label>
+        <textarea id="jdInput" placeholder="Paste the job description — role, company, responsibilities, requirements." oninput="uc('jdInput','jc')"></textarea>
+        <div class="cc" id="jc">0 chars</div>
+      </div>
+    </div>
+    <div class="action-row">
+      <p class="hint">LaTeX in → LaTeX out &nbsp;·&nbsp; Plain text in → DOCX out</p>
+      <button class="btn-primary" id="startBtn" onclick="start()">Start Analysis <span class="arr">→</span></button>
+    </div>
+    <div class="err-bar" id="errBar"><span>⚠</span><span id="errTxt"></span></div>
+  </div>
+  <div class="stages" id="stagesArea"></div>
+</div>
+
+<script>
+const WS=`WRITING STANDARD — apply silently before producing any text output:
+Banned words: delve, tapestry, pivotal, underscore, foster, testament, enhance, crucial, intricate, landscape, bolstered, innovative, transformative, groundbreaking, captivating, majestic, fascinating, and any word that reads like promotional copy.
+Banned structures: "not X but Y" and "not only X but Y" contrasts; em dash where a comma or colon is more natural; exactly three adjectives in a row.
+Banned transitions: additionally, furthermore, moreover, however (as a sentence opener), "this not only... but also".
+Banned filler: "it's worth noting", "it's important to remember", "this highlights", "it's clear that".
+Tone: Write directly and neutrally. No positive spin, no implied importance, no admiration. Specific, evidence-based, without filler.`;
+
+let resumeText='', jdText='', terminated=false, inputMode='text'; // 'latex' or 'text'
+
+// ── ACCENT PALETTE ────────────────────────────────────────────────────────────
+const ACCENT_PALETTE=[
+  {hex:'7030A0',name:'Purple'},{hex:'1F4E79',name:'Navy'},
+  {hex:'833C00',name:'Auburn'},{hex:'1D6A4E',name:'Forest'},
+  {hex:'8B0000',name:'Crimson'},{hex:'2E4057',name:'Slate'},
+  {hex:'5C3317',name:'Espresso'},{hex:'004080',name:'Royal Blue'},
+];
+function pickAccent(){return ACCENT_PALETTE[Math.floor(Math.random()*ACCENT_PALETTE.length)];}
+
+// ── MODE DETECTION ────────────────────────────────────────────────────────────
+function detectMode(val){
+  return val.trim().includes('\\documentclass') ? 'latex' : 'text';
+}
+
+function onResumeInput(){
+  const val = document.getElementById('resumeInput').value;
+  document.getElementById('rc').textContent = val.length.toLocaleString()+' chars';
+  const mode = detectMode(val);
+  inputMode = mode;
+  const badge = document.getElementById('inputModeBadge');
+  const indicator = document.getElementById('modeIndicator');
+  const ta = document.getElementById('resumeInput');
+  if(mode==='latex'){
+    badge.className='badge-lx';badge.textContent='LaTeX detected';
+    ta.className='is-latex';
+    indicator.textContent='Path: LaTeX → LaTeX output + Copy raw';
+    indicator.style.color='var(--blue)';
+  } else {
+    badge.className='badge-txt';badge.textContent='Plain Text';
+    ta.className='';
+    indicator.textContent= val.trim().length>10 ? 'Path: Plain Text → DOCX resume download' : 'Waiting for input…';
+    indicator.style.color= val.trim().length>10 ? 'var(--gold2)' : 'var(--ink3)';
+  }
+}
+
+function uc(a,b){document.getElementById(b).textContent=document.getElementById(a).value.length.toLocaleString()+' chars'}
+function showErr(m){document.getElementById('errTxt').textContent=m;document.getElementById('errBar').classList.add('on')}
+function sp(i,s){const pd=document.getElementById(STAGES[i].pd),pl=document.getElementById(STAGES[i].pl);pd.className='p-dot '+s;pl.className='p-lbl '+s;pd.textContent=s==='done'?'✓':(i+1)}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+
+function resetAll(){
+  terminated=false;resumeText='';jdText='';inputMode='text';
+  const ri=document.getElementById('resumeInput'),ji=document.getElementById('jdInput');
+  ri.value='';ji.value='';ri.disabled=false;ji.disabled=false;
+  ri.className='';
+  document.getElementById('rc').textContent='0 chars';
+  document.getElementById('jc').textContent='0 chars';
+  document.getElementById('inputModeBadge').className='badge-txt';
+  document.getElementById('inputModeBadge').textContent='Plain Text';
+  document.getElementById('modeIndicator').textContent='Waiting for input…';
+  document.getElementById('modeIndicator').style.color='var(--ink3)';
+  document.getElementById('startBtn').disabled=false;
+  document.getElementById('errBar').classList.remove('on');
+  document.getElementById('progWrap').style.display='none';
+  document.getElementById('stagesArea').innerHTML='';
+  STAGES.forEach((_,i)=>sp(i,'idle'));
+  STAGES.forEach(s=>document.getElementById(s.pid).className='pill p-idle');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ── STAGES CONFIG ─────────────────────────────────────────────────────────────
+const STAGES=[
+  {id:'ats',tag:'t-ats',label:'Stage 01',title:'ATS Gap Report',pid:'pill1',pac:'p-active',pdn:'p-done',pd:'pd1',pl:'pl1'},
+  {id:'resume',tag:'t-res',label:'Stage 02',title:'Tailored Resume',pid:'pill2',pac:'p-active',pdn:'p-done',pd:'pd2',pl:'pl2'},
+  {id:'intel',tag:'t-intel',label:'Stage 03',title:'Skills Intelligence Report',pid:'pill3',pac:'p-active p-intel',pdn:'p-done',pd:'pd3',pl:'pl3'},
+  {id:'cover',tag:'t-cov',label:'Stage 04',title:'Cover Letter',pid:'pill4',pac:'p-active',pdn:'p-done',pd:'pd4',pl:'pl4'},
+];
+
+// ── PROMPT BUILDERS ───────────────────────────────────────────────────────────
+function buildPrompt(si){
+  const isLatex = inputMode==='latex';
+  const note = isLatex
+    ? '\nNOTE: Resume is provided as LaTeX source. STRICTLY PROTECTED — do not alter: candidate name, contact details, all \\href{}{} links (copy verbatim), project names, stack lines, company/org names, dates, quantified outcomes. Only rewrite: Profile Summary, Technical Skills, and bullet descriptions within projects/certifications/leadership to embed JD keywords. Keep all \\resumeSubheading, \\resumeProjectHeading, \\faPhone, \\faEnvelope, \\faLinkedin, \\faGithub commands intact.'
+    : '\nNOTE: Resume is provided as plain text. STRICTLY PROTECTED — do not alter: candidate name, contact details, URLs, project names, company/org names, dates, quantified outcomes. Only rewrite: Summary, Skills, and bullet descriptions to embed JD keywords.';
+
+  const base=`You are my Job Application Co-pilot. I am a fresher targeting Business, Finance, and Consulting Analyst roles.\n\nMY RESUME (${isLatex?'LaTeX source':'plain text'}):\n${resumeText}${note}\n\nJOB DESCRIPTION:\n${jdText}\n\nCONSTRAINTS: Never fabricate experience. No hollow phrases. Frame fresher experience professionally. Formal tone. Note assumptions at end.\n${WS}`;
+
+  if(si===0) return base+`\n\nTASK — ATS Gap Report only. Nothing else.\nLine 1: "Match Score: X%"\nLines 2–3: Two sentences on overall fit.\nThen: Bullet list of exact missing keywords, tools, skills. Be specific.`;
+
+  if(si===1){
+    if(isLatex) return base+`\n\nTASK — Surgically edit the LaTeX resume. Output ONLY complete modified LaTeX from \\documentclass to \\end{document}. No explanation, no markdown, no prose.\n\nWHAT TO EDIT:\n1. Profile Summary — rewrite for this JD. 2 lines max. Lead with most relevant skill. Use exact JD language.\n2. Technical Skills — restructure 3–5 groups reflecting JD priorities. Remove irrelevant skills. Add JD-specific tools candidate plausibly knows.\n3. Projects — keep only 2 most relevant; delete others entirely. Rewrite bullets: Action Verb → Task → Quantified Impact. Embed JD keywords. Max 2 lines per bullet. Never change project names, stack lines, \\href links.\n4. Certifications — keep only directly relevant ones; delete others. Reorder most JD-relevant first. Rewrite bullets. Never change cert names, org names, dates. Do NOT club certifications — output each as a separate \\resumeSubheading; the tool handles clubbing automatically.\n5. Leadership bullets — reframe using JD stakeholder/operational language. Never remove or reorder entries.\n\nNEVER CHANGE: preamble, \\sloppy, candidate name, contact details, all \\href{}{} links, project names, stack lines, \\resumeSubheading titles, org names, dates, quantified outcomes, Education section, Leadership section structure.\n\nATS RULES: Every rewritten bullet: past-tense action verb → task → quantified outcome. Minimum 8 JD keywords. \\textbf{} on numbers and key outcomes only. Must compile in Overleaf without modification.`;
+
+    // Plain text prompt — structured output for DOCX parsing
+    return base+`\n\nTASK — Rewrite the plain text resume for this JD. Output structured plain text ONLY. Use this exact section format:\n\n== PROFILE SUMMARY ==\n[2 sentences max. Lead with most relevant skill. Use exact JD language.]\n\n== TECHNICAL SKILLS ==\n[Group: Skill 1, Skill 2, Skill 3]\n[Group: Skill 1, Skill 2]\n(3–5 groups. Group names reflect JD priorities. Remove irrelevant skills. Add JD-specific tools candidate plausibly knows.)\n\n== EXPERIENCE ==\n[Job Title | Company | Date Range]\n• [Bullet: Action Verb → Task → Quantified Impact]\n• [Bullet]\n• [Outcome bullet]\n(Repeat for each role)\n\n== PROJECTS ==\n[Project Name | Stack | Link if available]\n• [Bullet: Action Verb → Task → Quantified Impact]\n• [Bullet]\n(Keep only 2 most relevant. Delete others. Never change project names or quantified outcomes.)\n\n== CERTIFICATIONS & TRAINING ==\n[Cert Name | Org | Date]\n• [Bullet: what was learned, how it applies to this JD]\n(Keep only relevant certs. Reorder most relevant first.)\n\n== INDUSTRY SIMULATIONS ==\n[Simulation Name | Platform | Date]\n• [Bullet]\n\n== EDUCATION ==\n[Degree | Institution | Year | CGPA]\n• [Relevant Coursework line — do not change]\n\n== LEADERSHIP EXPERIENCE ==\n[Role | Org | Date]\n• [Bullet reframed with JD stakeholder/operational language]\n\nRULES: Never fabricate. Every bullet: past-tense verb → task → outcome. Minimum 8 JD keywords. No markdown, no LaTeX, no bold markers — plain text only with the == SECTION == delimiters intact.`;
+  }
+
+  if(si===2) return base+`\n\nTASK — Skills Intelligence Report only. Two sections:\n\n## GAP SKILLS\nFormat each: SKILL NAME — Free resource: [exact course title, platform]\n\n## PRUNED SKILLS\nList as comma-separated names only.`;
+
+  if(si===3) return base+`\n\nTASK — Cover letter only. Plain text. Follow this structure exactly:\n\n[Candidate Full Name]\n[Final-Year B.Tech Student | Data & Business Analytics]\n[City, Country | Phone | Email | LinkedIn URL]\n[DD Month YYYY]\n\n[Company Name]\n\nDear Hiring Manager,\n\n[OPENING: 3–4 sentences. State role directly. No flattery. One sentence on fit citing a specific skill or number. One sentence on what drew them to this role.]\n\n| [Top JD Skill 1] | ✔ [Evidence: action, number, outcome. 2–3 sentences.] |\n| [Top JD Skill 2] | ✔ [Evidence: action, number, outcome. 2–3 sentences.] |\n| [Top JD Skill 3] | ✔ [Evidence: action, outcome. 2–3 sentences.] |\n\n[CLOSING: 2–3 sentences. Direct close. State availability. Invite next step. No filler.]\n\nWarm regards,\n[Candidate Full Name]\n\nRULES: Apply writing standard. Skill labels = exact JD keywords. Total 320–380 words. Plain text only.`;
+}
+
+// ── CERT CLUBBING (LaTeX path only) ──────────────────────────────────────────
+function parseCertSection(latex){
+  const secMatch=latex.match(/\\section\{Certifications[^}]*\}([\s\S]*?)(?=\\section\{|\\end\{document\})/);
+  if(!secMatch)return null;
+  return{body:secMatch[1]};
+}
+function extractCertBlocks(body){
+  const blocks=[];
+  const re=/\\resumeSubheading\s*\{([^}]*)\}\{([^}]*)\}\{([^}]*)\}\{([^}]*)\}([\s\S]*?)(?=\\resumeSubheading|\s*\\resumeSubHeadingListEnd)/g;
+  let m;while((m=re.exec(body))!==null){blocks.push({title:m[1].trim(),date:m[2].trim(),platform:m[3].trim(),loc:m[4].trim(),itemsRaw:m[5].trim()});}
+  return blocks;
+}
+function extractItemTexts(itemsRaw){
+  const items=[];
+  const re=/\\resumeItem\{([\s\S]*?)\}(?=\s*\\resumeItem|\s*\\resumeItemListEnd|\s*$)/g;
+  let m;while((m=re.exec(itemsRaw))!==null)items.push(m[1].trim());
+  if(!items.length){const re2=/\\resumeItem\{([\s\S]*?)\}/g;let m2;while((m2=re2.exec(itemsRaw))!==null)items.push(m2[1].trim())}
+  return items;
+}
+function rebuildCertSection(blocks){
+  const groups={};const order=[];
+  blocks.forEach(b=>{const key=b.platform.toLowerCase().trim();if(!groups[key]){groups[key]=[];order.push(key);}groups[key].push(b);});
+  const report=[];let out='\\resumeSubHeadingListStart\n\n';
+  order.forEach(key=>{
+    const grp=groups[key];
+    if(grp.length===1){
+      const b=grp[0];
+      out+=`  \\resumeSubheading\n    {${b.title}}{${b.date}}\n    {${b.platform}}{${b.loc}}\n  \\resumeItemListStart\n`;
+      extractItemTexts(b.itemsRaw).forEach(txt=>{out+=`    \\resumeItem{${txt}}\n`;});
+      out+=`  \\resumeItemListEnd\n\n`;
+    }else{
+      const platform=grp[0].platform;
+      const dates=[...new Set(grp.map(b=>b.date))];const dateStr=dates.length===1?dates[0]:dates.join(' / ');
+      const titles=grp.map(b=>b.title).join(' \\& ');
+      report.push({platform,titles:grp.map(b=>b.title),dateStr});
+      out+=`  \\resumeSubheading\n    {${titles}}{${dateStr}}\n    {${platform}}{}\n  \\resumeItemListStart\n`;
+      grp.forEach(b=>{const items=extractItemTexts(b.itemsRaw);if(items.length){out+=`    \\resumeItem{\\textbf{${b.title}:} ${items[0]}}\n`;items.slice(1).forEach(txt=>{out+=`    \\resumeItem{${txt}}\n`});}});
+      out+=`  \\resumeItemListEnd\n\n`;
+    }
+  });
+  out+='\\resumeSubHeadingListEnd';
+  return{latex:out,report};
+}
+function clubCertifications(code){
+  const parsed=parseCertSection(code);
+  if(!parsed)return{latex:code,report:[],clubbed:false};
+  const blocks=extractCertBlocks(parsed.body);
+  if(!blocks.length)return{latex:code,report:[],clubbed:false};
+  const{latex:newSection,report}=rebuildCertSection(blocks);
+  const newBody=code.replace(
+    /\\section\{Certifications[^}]*\}\s*\\resumeSubHeadingListStart[\s\S]*?\\resumeSubHeadingListEnd/,
+    `\\section{Certifications \\& Training}\n${newSection}`
+  );
+  return{latex:newBody,report,clubbed:report.length>0};
+}
+
+// ── LATEX PLAIN TEXT RENDERER ─────────────────────────────────────────────────
+function latexToPlainText(code){
+  const bm=code.match(/\\begin\{document\}([\s\S]*?)\\end\{document\}/);
+  let body=bm?bm[1]:code;body=body.replace(/%[^\n]*/g,'');
+  const nameM=body.match(/\\scshape\s+([^\\}\n]+)/);const name=nameM?nameM[1].trim():'';
+  const emailM=body.match(/href\{mailto:([^}]+)\}/);const phoneM=body.match(/underline\{(\+?[\d\s-]+)\}/);
+  const liM=body.match(/href\{(https:\/\/www\.linkedin[^}]+)\}/);const ghM=body.match(/href\{(https:\/\/github[^}]+)\}/);
+  function cl(s){return s.replace(/\\resumeSubHeadingListStart|\\resumeSubHeadingListEnd|\\resumeItemListStart|\\resumeItemListEnd/g,'').replace(/\\resumeSubheading\{([^}]*)\}\{([^}]*)\}\{([^}]*)\}\{([^}]*)\}/g,(_,t,d,sub,loc)=>`\n  ${t}${d?' | '+d:''}${sub?'\n    '+sub:''}${loc?' — '+loc:''}\n`).replace(/\\resumeProjectHeading\{([\s\S]*?)\}\{[\s\S]*?\}/g,(_,t)=>'\n  '+t.replace(/\\textbf\{([^}]*)\}/g,'$1').replace(/\\href\{[^}]*\}\{([^}]*)\}/g,'[$1]').replace(/\\[a-zA-Z]+\*?\{?/g,'').replace(/\}/g,'').trim()+'\n').replace(/\\resumeItem\{([\s\S]*?)\}(?=\s*\\resumeItem|\s*\\resumeItemListEnd|\s*\\resumeSubHeadingListEnd)/g,(_,t)=>'    • '+t.replace(/\n\s*/g,' ').trim()+'\n').replace(/\\resumeItem\{([\s\S]*?)\}/g,(_,t)=>'    • '+t.replace(/\n\s*/g,' ').trim()+'\n').replace(/\\textbf\{([^}]*)\}/g,'$1').replace(/\\textit\{([^}]*)\}/g,'$1').replace(/\\textperiodcentered\\/g,'·').replace(/\\textcolor\{[^}]*\}\{([^}]*)\}/g,'$1').replace(/\\underline\{([^}]*)\}/g,'$1').replace(/\\href\{[^}]*\}\{([^}]*)\}/g,'$1').replace(/\\small\s*|\\large\s*/g,'').replace(/\\vspace\{[^}]*\}|\\hspace\{[^}]*\}/g,'').replace(/\\begin\{itemize\}[^\n]*/g,'').replace(/\\end\{itemize\}/g,'').replace(/\\begin\{[^}]*\}|\\end\{[^}]*\}/g,'').replace(/\\begin\{tabular[^}]*\}\{[^}]*\}/g,'').replace(/\\item\s*/g,'  • ').replace(/\\\\/g,'\n').replace(/\$[^$]*\$/g,'').replace(/\\pounds/g,'£').replace(/``/g,'"').replace(/''/g,'"').replace(/---/g,'—').replace(/--/g,'–').replace(/\\[a-zA-Z]+\*?(\{[^}]*\})?/g,(_,a)=>a?a.slice(1,-1):'').replace(/\{|\}/g,'').replace(/[ \t]+/g,' ').split('\n').map(l=>l.trimEnd()).join('\n').replace(/\n{3,}/g,'\n\n').trim()}
+  const sr=/\\section\{([^}]+)\}/g;const sp2=[];let m2;
+  while((m2=sr.exec(body))!==null)sp2.push({name:m2[1],start:m2.index,cStart:m2.index+m2[0].length});
+  let out='';if(name)out+=name+'\n';
+  const contacts=[phoneM?phoneM[1]:'',emailM?emailM[1]:'',liM?liM[1]:'',ghM?ghM[1]:''].filter(Boolean);
+  if(contacts.length)out+=contacts.join('  |  ')+'\n';out+='\n';
+  sp2.forEach((sec,i)=>{const ce=i+1<sp2.length?sp2[i+1].start:body.length;const raw=body.slice(sec.cStart,ce);const sn=sec.name.replace(/\\&/g,'&').replace(/\\[a-zA-Z]+/g,'').trim();out+='━━━ '+sn.toUpperCase()+' ━━━\n'+cl(raw)+'\n\n'});
+  return out.trim();
+}
+
+// ── KEYWORD BRIDGE ENGINE ─────────────────────────────────────────────────────
+const BRIDGE_MAP=[
+  {gap:/pytorch|hugging.?face|deep.?learn/i,existing:['Scikit-learn','Azure AI','Microsoft AI'],suggestion:'Frame Scikit-learn ML work as classical ML; Azure AI exposure covers foundational deep learning concepts'},
+  {gap:/grafana/i,existing:['Power BI','Tableau'],suggestion:'Power BI and Tableau cover the BI tool requirement; note familiarity with time-series dashboards'},
+  {gap:/looker|metabase/i,existing:['Power BI','Tableau'],suggestion:'Power BI/Tableau satisfy the BI platform requirement; mention willingness to cross-train on Looker'},
+  {gap:/case.?when/i,existing:['SQL','CTEs','Window Functions','PostgreSQL'],suggestion:'CASE WHEN is standard SQL — add it explicitly to the SQL skills group and one project bullet'},
+  {gap:/conditional.?format/i,existing:['Advanced Excel','Pivot Tables'],suggestion:'Add "conditional formatting" explicitly to the Excel skills group'},
+  {gap:/root.?cause/i,existing:['EDA','anomaly detection','data quality'],suggestion:'Reframe the Deloitte anomaly detection bullet as root-cause analysis with findings and recommendations'},
+  {gap:/cohort/i,existing:['RFM Segmentation','investor transactions','geographic segmentation'],suggestion:'The Bluestock star schema supports cohort analysis — reframe that bullet to name it explicitly'},
+  {gap:/retention/i,existing:['RFM','At Risk customers','customer segmentation'],suggestion:'"At Risk" customer isolation in the segmentation project is a retention analysis — use that language'},
+  {gap:/feature.?impact|product.?experiment/i,existing:['A/B Testing','uplift testing'],suggestion:'The Quantium uplift testing bullet maps directly — reframe as feature impact assessment'},
+  {gap:/hiring.?funnel|recruitment.?metric|candidate.?performance/i,existing:['KPI Reporting','workforce reduction rate','Tech Layoffs Dashboard'],suggestion:'The Tech Layoffs dashboard covers workforce analytics — reframe KPI bullets toward hiring funnel language'},
+  {gap:/synthetic.?data/i,existing:['labelled dataset','Google Forms API'],suggestion:'The Sorting Hat labelled dataset pipeline is adjacent — frame it as structured data curation for model training'},
+  {gap:/llm.?eval|model.?evaluation/i,existing:['Anthropic Claude API','AI Fluency','prompt engineering'],suggestion:'Anthropic AI Fluency cert covers LLM output evaluation — surface that framing in the cert bullet'},
+  {gap:/unstructured.?data/i,existing:['REST API','AMFI','mfapi'],suggestion:'AMFI REST API ingestion is unstructured data handling — name it explicitly in the ETL bullet'},
+  {gap:/weekly.*(report|analytical)/i,existing:['KPI Reporting','structured reports','McKinsey'],suggestion:'McKinsey Forward cert bullet can reference weekly reporting cadence — add that language'},
+];
+function renderATSBridge(raw){
+  const lines=raw.split('\n');
+  const gaps=lines.filter(l=>l.trim().match(/^[-•*]\s+.{5,}/)).map(l=>l.trim().replace(/^[-•*]\s+/,''));
+  if(!gaps.length)return'';
+  const bridges=[];
+  gaps.forEach(gap=>{
+    BRIDGE_MAP.forEach(rule=>{
+      if(rule.gap.test(gap)){
+        const found=rule.existing.filter(kw=>resumeText.toLowerCase().includes(kw.toLowerCase()));
+        if(found.length&&!bridges.find(b=>b.suggestion===rule.suggestion)){
+          bridges.push({gap:gap.slice(0,90),existing:found,suggestion:rule.suggestion});
+        }
+      }
+    });
+  });
+  if(!bridges.length)return'';
+  const rows=bridges.map(b=>`<div class="gap-item"><div class="gap-dot-blue"></div><div class="gap-skill">${esc(b.gap)}${b.gap.length>=90?'…':''}</div><div class="gap-res">Existing: <strong style="color:var(--blue)">${b.existing.join(', ')}</strong></div><div class="bridge-badge">→ ${esc(b.suggestion)}</div></div>`).join('');
+  return`<div class="si-sec" style="margin-top:1.25rem"><div class="si-sec-head"><div class="si-icon icon-bridge">↔</div><span class="si-sec-title si-bridge">Keyword Bridge</span><span class="si-count">${bridges.length} bridgeable gap${bridges.length!==1?'s':''}</span></div><p style="font-size:11.5px;color:var(--ink3);margin-bottom:.75rem;line-height:1.55">These gaps have close equivalents already on your resume. Use the suggestion below when Claude tailors Stage 02.</p>${rows}</div>`;
+}
+
+// ── SKILLS INTELLIGENCE RENDERER ──────────────────────────────────────────────
+function parseSkills(raw){
+  const gS=raw.match(/##\s*GAP SKILLS([\s\S]*?)(?=##\s*PRUNED SKILLS|$)/i);
+  const pS=raw.match(/##\s*PRUNED SKILLS([\s\S]*?)$/i);
+  const gR=gS?gS[1].trim():'',pR=pS?pS[1].trim():'';
+  const gItems=gR.split('\n').map(l=>l.trim()).filter(l=>l.length>3&&!l.startsWith('#')).map(line=>{const c=line.replace(/^[-•*]\s*/,'');const di=c.indexOf(' — ');if(di>-1)return{skill:c.slice(0,di).trim(),res:c.slice(di+3).replace(/^Free resource:\s*/i,'').trim()};const ci=c.indexOf(':');if(ci>-1&&ci<40)return{skill:c.slice(0,ci).trim(),res:c.slice(ci+1).trim()};return{skill:c,res:''}}).filter(i=>i.skill.length>1);
+  const pItems=pR.replace(/^[-•*]\s*/gm,'').split(/[,\n]/).map(s=>s.trim()).filter(s=>s.length>1&&s.length<60&&!s.startsWith('#'));
+  return{gItems,pItems};
+}
+function renderSkillsIntelligence(){
+  const raw=(document.getElementById('siPaste')||{}).value||'';if(!raw||raw.length<20)return;
+  const{gItems,pItems}=parseSkills(raw);
+  const bridgeHtml=renderATSBridge(raw);
+  const gH=gItems.map(i=>`<div class="gap-item"><div class="gap-dot"></div><div class="gap-skill">${esc(i.skill)}</div>${i.res?`<div class="gap-res">${esc(i.res)}</div>`:''}</div>`).join('');
+  const pH=pItems.map(p=>`<span class="pruned-tag">${esc(p)}</span>`).join('');
+  const d=document.getElementById('siDisplay');if(!d)return;
+  d.innerHTML=`<div class="si-display"><div class="si-hdr"><span class="si-hdr-lbl">Skills Intelligence Report</span><button class="mb mb-purple" onclick="cpEl('siPaste',this,'Copy raw','Copied!')">Copy raw</button></div><div class="si-body"><div class="si-sec"><div class="si-sec-head"><div class="si-icon icon-gap">✗</div><span class="si-sec-title si-gap">Gap Skills</span><span class="si-count">${gItems.length} to acquire</span></div>${gH||'<p style="font-size:12px;color:var(--ink3)">No gap skills detected.</p>'}</div>${bridgeHtml}<div class="si-sec"><div class="si-sec-head"><div class="si-icon icon-pruned">○</div><span class="si-sec-title si-pruned">Pruned Skills</span><span class="si-count">${pItems.length} removed</span></div><div class="pruned-grid">${pH||'<p style="font-size:12px;color:var(--ink3)">No skills were pruned.</p>'}</div></div></div></div>`;
+  d.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+// ── LATEX STAGE 02 RENDERER ───────────────────────────────────────────────────
+let _clubbedLatex='';
+function renderLx(){
+  const rawCode=(document.getElementById('lxPaste')||{}).value||'';
+  if(rawCode.trim().length<50)return;
+  const{latex:clubbed,report,clubbed:didClub}=clubCertifications(rawCode);
+  _clubbedLatex=clubbed;
+  const iH=extractHrefs(resumeText),oH=extractHrefs(clubbed),miss=iH.filter(h=>!oH.includes(h));
+  const nameIn=resumeText.match(/\\scshape\s+([^\}\\]+)/);const nameOk=nameIn?clubbed.includes(nameIn[1].trim()):true;
+  const checks=[
+    ['\\documentclass',clubbed.includes('\\documentclass')],['\\sloppy',clubbed.includes('\\sloppy')],
+    ['BrickRed sections',clubbed.includes('BrickRed')],['Profile Summary',/section\{Profile Summary\}/i.test(clubbed)],
+    ['Technical Skills',/section\{Technical Skills\}/i.test(clubbed)],['Projects',/section\{Projects\}/i.test(clubbed)],
+    ['Education',/section\{Education\}/i.test(clubbed)],[`\\href links (${oH.length}/${iH.length})`,miss.length===0],
+    ['Candidate name',nameOk],['\\end{document}',clubbed.includes('\\end{document}')]
+  ];
+  if(miss.length)checks.push([`⚠ Missing: ${miss.slice(0,2).join(', ')}${miss.length>2?'…':''}`,false]);
+  if(didClub)checks.push([`Certs clubbed: ${report.length} group(s)`,true,'info']);
+  const badges=checks.map(([l,p,t])=>`<span class="lx-badge ${t==='info'?'b-info':p?'b-pass':'b-fail'}">${t==='info'?'⬡':p?'✓':'✗'} ${esc(l)}</span>`).join('');
+  const clubHtml=didClub?`<div class="club-report"><div class="club-report-hdr">⬡ Certification Clubbing Report</div>${report.map(r=>`<div class="club-item"><strong>${esc(r.platform)}:</strong> ${r.titles.map(t=>esc(t)).join(' + ')} → clubbed (${esc(r.dateStr)})</div>`).join('')}</div>`:'';
+  const wrap=document.getElementById('lxPreview');if(!wrap)return;
+  wrap.innerHTML=`<div class="lx-wrap"><div class="lx-bar"><span class="lx-lbl">RESUME PREVIEW${didClub?' · certs clubbed':''}</span><div style="display:flex;gap:6px"><button class="mb mb-muted" onclick="toggleRaw(this)">Show LaTeX</button><button class="mb mb-teal" onclick="cpClubbedLatex(this)">Copy clubbed LaTeX</button></div></div><div class="lx-rendered">${esc(latexToPlainText(clubbed))}</div><div id="lxRaw" style="display:none;border-top:.5px solid var(--border)"><div class="lx-raw-hdr">Clubbed LaTeX source</div><div class="lx-raw-code">${esc(clubbed)}</div></div><div class="lx-badges">${badges}</div></div>${clubHtml}`;
+  wrap.scrollIntoView({behavior:'smooth',block:'start'});
+}
+function extractHrefs(src){const re=/\\href\{([^}]+)\}/g;const out=[];let m;while((m=re.exec(src))!==null)out.push(m[1]);return out}
+function cpClubbedLatex(btn){
+  if(!_clubbedLatex)return;
+  function ok(){btn.textContent='Copied ✓';setTimeout(()=>btn.textContent='Copy clubbed LaTeX',2000)}
+  try{navigator.clipboard?navigator.clipboard.writeText(_clubbedLatex).then(ok).catch(fb):fb()}catch(e){fb()}
+  function fb(){const ta=document.createElement('textarea');ta.value=_clubbedLatex;ta.style.cssText='position:fixed;opacity:0;pointer-events:none';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');ok()}catch(e2){btn.textContent='Select & copy manually'}document.body.removeChild(ta)}
+}
+function toggleRaw(btn){const r=document.getElementById('lxRaw');if(!r)return;const show=r.style.display==='none';r.style.display=show?'block':'none';btn.textContent=show?'Hide LaTeX':'Show LaTeX'}
+
+// ── TEXT STAGE 02 RENDERER + DOCX ────────────────────────────────────────────
+let _plainResumeText='';
+function renderTxtResume(){
+  const raw=(document.getElementById('txtPaste')||{}).value||'';
+  if(raw.trim().length<50)return;
+  _plainResumeText=raw;
+  const wrap=document.getElementById('txtPreview');if(!wrap)return;
+  wrap.innerHTML=`<div class="txt-preview">
+    <div class="txt-preview-bar">
+      <span class="txt-preview-lbl">RESUME PREVIEW · Text Path</span>
+      <button class="mb mb-gold" onclick="cpEl('txtPaste',this,'Copy raw','Copied!')">Copy raw</button>
+    </div>
+    <div class="txt-preview-body">${esc(raw)}</div>
+    <div class="txt-preview-footer">
+      <button class="btn-dl" id="dlResumeBtn" onclick="downloadResumeDocx(this)">↓ Download Resume DOCX</button>
+    </div>
+  </div>`;
+  wrap.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+async function downloadResumeDocx(btn){
+  if(!btn||btn.disabled)return;
+  const raw=_plainResumeText||'';if(!raw)return;
+  btn.disabled=true;btn.textContent='Building…';
+  try{
+    if(typeof JSZip==='undefined')throw new Error('JSZip not loaded');
+    const accent=pickAccent();
+    const accentHex=accent.hex;
+    function xe(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+
+    // Parse structured sections from == SECTION == delimiters
+    const sectionRe=/==\s*([^=]+?)\s*==\n([\s\S]*?)(?===\s*[^=]+?\s*==|$)/g;
+    const sections=[];let m;
+    while((m=sectionRe.exec(raw))!==null){sections.push({name:m[1].trim().toUpperCase(),body:m[2].trim()});}
+
+    // If no == delimiters, treat whole thing as freeform
+    const hasSections=sections.length>0;
+
+    // Extract candidate name: first non-empty line of raw or first line of the resume text input
+    const rawLines=raw.split('\n').map(l=>l.trim()).filter(Boolean);
+    const candidateName=rawLines[0]||'Resume';
+    const contactLine=rawLines[1]||'';
+
+    function makeNamePara(name){
+      return`<w:p><w:pPr><w:spacing w:after="0"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="36"/><w:szCs w:val="36"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:color w:val="${accentHex}"/></w:rPr><w:t>${xe(name)}</w:t></w:r></w:p>`;
+    }
+    function makeRulePara(){
+      return`<w:p><w:pPr><w:spacing w:after="60"/><w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="${accentHex}"/></w:pBdr></w:pPr></w:p>`;
+    }
+    function makeContactPara(txt){
+      return txt?`<w:p><w:pPr><w:spacing w:after="200"/></w:pPr><w:r><w:rPr><w:sz w:val="18"/><w:szCs w:val="18"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:color w:val="595959"/></w:rPr><w:t>${xe(txt)}</w:t></w:r></w:p>`:'';
+    }
+    function makeSectionHeader(title){
+      return`<w:p><w:pPr><w:spacing w:before="240" w:after="60"/><w:pBdr><w:bottom w:val="single" w:sz="4" w:space="1" w:color="${accentHex}"/></w:pBdr></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="24"/><w:szCs w:val="24"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:color w:val="${accentHex}"/></w:rPr><w:t>${xe(title)}</w:t></w:r></w:p>`;
+    }
+    function makeBullet(txt){
+      return`<w:p><w:pPr><w:ind w:left="360" w:hanging="180"/><w:spacing w:after="60"/></w:pPr><w:r><w:rPr><w:sz w:val="20"/><w:szCs w:val="20"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr><w:t xml:space="preserve">• ${xe(txt)}</w:t></w:r></w:p>`;
+    }
+    function makeSubheading(txt){
+      return`<w:p><w:pPr><w:spacing w:after="40"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="22"/><w:szCs w:val="22"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr><w:t>${xe(txt)}</w:t></w:r></w:p>`;
+    }
+    function makeBodyLine(txt){
+      return`<w:p><w:pPr><w:spacing w:after="60"/></w:pPr><w:r><w:rPr><w:sz w:val="20"/><w:szCs w:val="20"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr><w:t xml:space="preserve">${xe(txt)}</w:t></w:r></w:p>`;
+    }
+
+    let bodyXml='';
+    bodyXml+=makeNamePara(candidateName);
+    bodyXml+=makeRulePara();
+    bodyXml+=makeContactPara(contactLine);
+
+    if(hasSections){
+      sections.forEach(sec=>{
+        bodyXml+=makeSectionHeader(sec.name);
+        const lines=sec.body.split('\n');
+        lines.forEach(line=>{
+          const t=line.trim();if(!t)return;
+          if(t.startsWith('•')||t.startsWith('-')){
+            bodyXml+=makeBullet(t.replace(/^[•\-]\s*/,''));
+          } else if(t.includes('|')){
+            // subheading line (e.g. "Job Title | Company | Date")
+            bodyXml+=makeSubheading(t);
+          } else {
+            bodyXml+=makeBodyLine(t);
+          }
+        });
+      });
+    } else {
+      // Freeform — just render lines
+      const lines=raw.split('\n').slice(2); // skip name + contact already in header
+      lines.forEach(line=>{
+        const t=line.trim();if(!t){bodyXml+=`<w:p><w:pPr><w:spacing w:after="60"/></w:pPr></w:p>`;return;}
+        if(t.startsWith('•')||t.startsWith('-'))bodyXml+=makeBullet(t.replace(/^[•\-]\s*/,''));
+        else if(t===t.toUpperCase()&&t.length>3)bodyXml+=makeSectionHeader(t);
+        else bodyXml+=makeBodyLine(t);
+      });
+    }
+
+    const docXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${bodyXml}<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1080" w:right="1080" w:bottom="1080" w:left="1080"/></w:sectPr></w:body></w:document>`;
+    const stylesXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr></w:rPrDefault></w:docDefaults></w:styles>`;
+    const ct=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>`;
+    const rootRels=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`;
+    const wordRels=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`;
+    const zip=new JSZip();
+    zip.file('[Content_Types].xml',ct);zip.folder('_rels').file('.rels',rootRels);
+    const word=zip.folder('word');word.file('document.xml',docXml);word.file('styles.xml',stylesXml);word.folder('_rels').file('document.xml.rels',wordRels);
+    const uint8=await zip.generateAsync({type:'uint8array',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+    const blob=new Blob([uint8],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=url;a.download='tailored_resume.docx';a.style.display='none';
+    document.body.appendChild(a);a.click();
+    setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},2000);
+    btn.textContent=`Downloaded ✓ (${accent.name} accent)`;
+    setTimeout(()=>{btn.textContent='↓ Download Resume DOCX';btn.disabled=false;},3000);
+  }catch(e){
+    console.error('Resume DOCX:',e);
+    btn.textContent='Failed — copy raw text instead';
+    setTimeout(()=>{btn.textContent='↓ Download Resume DOCX';btn.disabled=false;},3000);
+  }
+}
+
+// ── COVER LETTER RENDERER + DOCX ─────────────────────────────────────────────
+function renderCov(){
+  const txt=(document.getElementById('covPaste')||{}).value||'';if(!txt)return;
+  const wc=txt.split(/\s+/).filter(Boolean).length;
+  const wcc=wc>=320&&wc<=380?'var(--green)':wc<320?'#e87070':'var(--gold2)';
+  const wcl=wc>=320&&wc<=380?'✓ On target':wc<320?'⚠ Too short':'⚠ Slightly over';
+  const d=document.getElementById('covDisplay');if(!d)return;
+  d.innerHTML=`<div class="cov-display"><div class="cov-bar"><span class="cov-bar-lbl">Cover Letter</span><button class="mb mb-gold" onclick="cpEl('covPaste',this,'Copy','Copied!')">Copy</button></div><div class="cov-body">${esc(txt)}</div><div class="cov-footer"><span class="cov-wc">Words: <span style="color:${wcc}">${wc}</span> / 320–380 &nbsp;·&nbsp; <span style="color:${wcc}">${wcl}</span></span><button class="btn-dl" id="dlBtn" onclick="downloadCovDocx(this)">↓ Download DOCX</button></div></div>`;
+  d.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+async function downloadCovDocx(btn){
+  if(!btn||btn.disabled)return;
+  const txt=(document.getElementById('covPaste')||{}).value||'';if(!txt)return;
+  btn.disabled=true;btn.textContent='Building…';
+  try{
+    if(typeof JSZip==='undefined')throw new Error('JSZip not loaded');
+    const accent=pickAccent();const accentHex=accent.hex;
+    function xe(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+    const lines=txt.split('\n').map(l=>l.trim()).filter(Boolean);
+    const candidateName=lines[0]||'Cover Letter';
+    const contactLine=lines[1]||'';
+    const salutIdx=lines.findIndex(l=>l.startsWith('Dear '));
+    const headerLines=salutIdx>0?lines.slice(0,salutIdx):lines.slice(0,4);
+    const bodyLines=salutIdx>=0?lines.slice(salutIdx):lines.slice(4);
+    const addressLines=headerLines.slice(2);
+    const nameXml=`<w:p><w:pPr><w:spacing w:after="0"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="36"/><w:szCs w:val="36"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:color w:val="${accentHex}"/></w:rPr><w:t>${xe(candidateName)}</w:t></w:r></w:p>`;
+    const ruleXml=`<w:p><w:pPr><w:spacing w:after="60"/><w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="${accentHex}"/></w:pBdr></w:pPr></w:p>`;
+    const contactXml=contactLine?`<w:p><w:pPr><w:spacing w:after="180"/></w:pPr><w:r><w:rPr><w:sz w:val="18"/><w:szCs w:val="18"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:color w:val="595959"/></w:rPr><w:t>${xe(contactLine)}</w:t></w:r></w:p>`:'';
+    const addressXml=addressLines.map(l=>`<w:p><w:pPr><w:spacing w:after="0"/></w:pPr><w:r><w:rPr><w:sz w:val="22"/><w:szCs w:val="22"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr><w:t xml:space="preserve">${xe(l)}</w:t></w:r></w:p>`).join('');
+    const spacerXml=`<w:p><w:pPr><w:spacing w:after="120"/></w:pPr></w:p>`;
+    const bodyText=bodyLines.join('\n');
+    const paras=bodyText.split(/\n\n+/).filter(p=>p.trim());
+    const bodyXml=paras.map(p=>{const t=p.trim();const isSignoff=t==='Sincerely,'||t==='Warm regards,'||t.startsWith(candidateName.split(' ')[0]);const runs=t.split('\n').map((ln,i)=>{const r=`<w:r><w:rPr>${isSignoff?'<w:b/>':''}<w:sz w:val="22"/><w:szCs w:val="22"/><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/></w:rPr><w:t xml:space="preserve">${xe(ln)}</w:t></w:r>`;return i<t.split('\n').length-1?r+'<w:r><w:br/></w:r>':r}).join('');return`<w:p><w:pPr><w:spacing w:after="160"/><w:jc w:val="both"/></w:pPr>${runs}</w:p>`;}).join('');
+    const docXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${nameXml}${ruleXml}${contactXml}${addressXml}${spacerXml}${bodyXml}<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/></w:sectPr></w:body></w:document>`;
+    const stylesXml=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="22"/><w:szCs w:val="22"/></w:rPr></w:rPrDefault></w:docDefaults></w:styles>`;
+    const ct=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/></Types>`;
+    const rootRels=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`;
+    const wordRels=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`;
+    const zip=new JSZip();zip.file('[Content_Types].xml',ct);zip.folder('_rels').file('.rels',rootRels);
+    const word=zip.folder('word');word.file('document.xml',docXml);word.file('styles.xml',stylesXml);word.folder('_rels').file('document.xml.rels',wordRels);
+    const uint8=await zip.generateAsync({type:'uint8array',mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+    const blob=new Blob([uint8],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=url;a.download='cover_letter.docx';a.style.display='none';
+    document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},2000);
+    btn.textContent=`Downloaded ✓ (${accent.name} accent)`;
+    setTimeout(()=>{btn.textContent='↓ Download DOCX';btn.disabled=false;},3000);
+  }catch(e){console.error('DOCX:',e);btn.textContent='Failed — copy text instead';setTimeout(()=>{btn.textContent='↓ Download DOCX';btn.disabled=false;},3000);}
+}
+
+function cpEl(id,btn,def,done){
+  const el=document.getElementById(id);if(!el)return;
+  const txt=el.tagName==='TEXTAREA'?el.value:el.innerText;
+  function ok(){btn.textContent=done;setTimeout(()=>btn.textContent=def,2000)}
+  try{navigator.clipboard?navigator.clipboard.writeText(txt).then(ok).catch(fb):fb()}catch(e){fb()}
+  function fb(){if(el.tagName==='TEXTAREA'){el.select();try{document.execCommand('copy');ok()}catch(e2){btn.textContent='Select & copy manually'}}}
+}
+
+// ── CARD BUILDER ──────────────────────────────────────────────────────────────
+function addCard(si){
+  const s=STAGES[si];const p=buildPrompt(si);const peek=p.slice(0,280)+(p.length>280?'\n...[continues]':'');
+  const isLatex=inputMode==='latex';
+  const stageTag=si===1?(isLatex?'t-res':'t-res-txt'):s.tag;
+  const stageTitle=si===1?(isLatex?'Tailored Resume · LaTeX':'Tailored Resume · Text → DOCX'):s.title;
+  const card=document.createElement('div');card.className='stage-card';card.id='card-'+s.id;
+
+  let notes='';
+  if(si===0) notes=`<div class="note note-blue"><strong>↔ Keyword Bridge:</strong> After pasting the ATS output into Skills Intelligence, the tool auto-maps each gap to your closest existing skills and suggests reframing angles.</div>`;
+  if(si===1&&isLatex) notes=`<div class="note note-blue"><strong>↻ LaTeX path:</strong> Paste Claude's LaTeX output below to preview, club certifications, validate integrity, and copy the final source.</div><div class="note note-teal"><strong>⬡ Auto-clubs:</strong> Certifications from the same platform are automatically grouped after you paste.</div>`;
+  if(si===1&&!isLatex) notes=`<div class="note note-gold"><strong>↓ Text path:</strong> Paste Claude's plain-text resume output below to preview and download as a styled DOCX with section headers and bullet formatting.</div>`;
+  if(si===3) notes=`<div class="note note-gold"><strong>✓ Human writing:</strong> AI writing patterns silently removed before output</div>`;
+
+  card.innerHTML=`<div class="card-head"><div class="card-head-l"><span class="c-tag ${stageTag}">${s.label}</span><span class="c-title">${stageTitle}</span></div><span class="c-status" id="cs-${s.id}">Ready</span></div><div class="card-body" id="cb-${s.id}">${notes}<div class="peek">${esc(peek)}</div><div class="btn-row"><button class="btn-send" id="cpbtn-${si}" onclick="copyAndRevealSent(${si},this)">Copy Prompt</button><button class="btn-ghost" id="sentbtn-${si}" style="display:none;border-color:var(--grb);color:var(--green)" onclick="markSent(${si})">✓ Mark as Sent</button><button class="btn-stop" onclick="stopFlow()">✕ Stop</button></div><p class="hm">Copy prompt → paste into Claude → come back and click Mark as Sent.</p></div>`;
+  document.getElementById('stagesArea').appendChild(card);
+  sp(si,'active');document.getElementById(s.pid).className='pill '+s.pac;
+  setTimeout(()=>card.scrollIntoView({behavior:'smooth',block:'start'}),80);
+}
+
+function copyAndRevealSent(si,btn){
+  const p=buildPrompt(si);
+  function ok(){btn.textContent='Copied ✓';btn.style.opacity='.6';btn.disabled=true;const sb=document.getElementById('sentbtn-'+si);if(sb)sb.style.display='inline-flex'}
+  function fb(){const ta=document.createElement('textarea');ta.value=p;ta.style.cssText='position:fixed;opacity:0;pointer-events:none';document.body.appendChild(ta);ta.select();try{document.execCommand('copy');ok()}catch(e){btn.textContent='Select & copy manually'}document.body.removeChild(ta)}
+  try{navigator.clipboard?navigator.clipboard.writeText(p).then(ok).catch(fb):fb()}catch(e){fb()}
+}
+
+function markSent(si){
+  const s=STAGES[si];document.getElementById('cs-'+s.id).textContent='Sent ✓';
+  const sb=document.getElementById('sentbtn-'+si);if(sb){sb.disabled=true;sb.textContent='Sent ✓'}
+  sendStage(si);
+}
+
+// ── STAGE GATE RENDERER ───────────────────────────────────────────────────────
+function sendStage(si){
+  const s=STAGES[si];const cb=document.getElementById('cb-'+s.id);if(!cb)return;
+  const isLatex=inputMode==='latex';
+
+  // Stage 02 — dual path
+  if(si===1){
+    if(isLatex){
+      cb.innerHTML=`<div class="gate gate-green"><div class="g-title g-green">LaTeX Resume sent ✓</div><div class="g-desc">Paste Claude's LaTeX output below. Cert clubbing, plain-text preview, and integrity validation run automatically.</div><div style="margin-top:.875rem"><div class="la-lbl"><span class="la-bar" style="background:var(--blue)"></span>Paste LaTeX output</div><textarea class="la-ta" id="lxPaste" placeholder="Paste LaTeX code — \\documentclass to \\end{document}"></textarea><div class="la-btns"><button class="btn-render br-blue" onclick="renderLx()">Preview, Club &amp; Validate →</button><button class="btn-ghost" onclick="cpEl('lxPaste',this,'Copy raw LaTeX','Copied!')">Copy raw</button></div><div id="lxPreview"></div></div><div class="g-btns" style="margin-top:1rem"><button class="btn-yes" onclick="nextStage(${si})">Yes — generate Skills Intelligence →</button><button class="btn-no" onclick="stopFlow()">No — stop here</button></div></div>`;
+    } else {
+      cb.innerHTML=`<div class="gate gate-gold"><div class="g-title g-gold">Plain-Text Resume sent ✓</div><div class="g-desc">Paste Claude's plain-text resume output below to preview and download as a styled Word document.</div><div style="margin-top:.875rem"><div class="la-lbl"><span class="la-bar" style="background:var(--gold)"></span>Paste plain-text resume output</div><textarea class="txt-ta" id="txtPaste" placeholder="Paste Claude's structured plain-text resume here…"></textarea><div class="la-btns"><button class="btn-render br-gold" onclick="renderTxtResume()">Preview &amp; Prepare DOCX →</button></div><div id="txtPreview"></div></div><div class="g-btns" style="margin-top:1rem"><button class="btn-yes" onclick="nextStage(${si})">Yes — generate Skills Intelligence →</button><button class="btn-no" onclick="stopFlow()">No — stop here</button></div></div>`;
+    }
+    return;
+  }
+
+  // Stage 03 — Skills Intelligence
+  if(si===2){
+    cb.innerHTML=`<div class="gate gate-purple"><div class="g-title g-purple">Skills Intelligence sent ✓</div><div class="g-desc">Paste Claude's output below to render gap skills, keyword bridges, and pruned skills.</div><textarea class="si-ta" id="siPaste" placeholder="Paste Skills Intelligence output here…" style="margin-top:.75rem"></textarea><div style="margin-top:.5rem"><button class="btn-render br-purple" onclick="renderSkillsIntelligence()">Render Report →</button></div><div id="siDisplay"></div><div class="g-btns" style="margin-top:1rem"><button class="btn-yes" onclick="nextStage(${si})">Yes — draft cover letter →</button><button class="btn-no" onclick="stopFlow()">No — stop here</button></div></div>`;
+    return;
+  }
+
+  // Stage 04 — Cover Letter
+  if(si===3){
+    cb.innerHTML=`<div class="gate gate-green"><div class="g-title g-green">Cover Letter sent ✓</div><div class="g-desc">Paste the cover letter below to preview and download.</div><div style="margin-top:.875rem"><div class="la-lbl"><span class="la-bar" style="background:var(--gold)"></span>Paste cover letter</div><textarea class="cov-ta" id="covPaste" placeholder="Paste cover letter here…"></textarea><div style="margin-top:.5rem"><button class="btn-render br-gold" onclick="renderCov()">Preview →</button></div><div id="covDisplay"></div></div><div class="g-btns" style="margin-top:1rem"><button class="btn-yes" onclick="nextStage(${si})">Complete workflow ✓</button><button class="btn-no" onclick="stopFlow()">Stop here</button></div></div>`;
+    return;
+  }
+
+  // Stage 01 — ATS (fallthrough, no paste needed)
+  cb.innerHTML=`<div class="gate gate-green"><div class="g-title g-green">ATS Gap Report sent ✓</div><div class="g-desc">Review above. Proceed to generate your tailored resume?</div><div class="g-btns"><button class="btn-yes" onclick="nextStage(${si})">Yes — generate tailored resume →</button><button class="btn-no" onclick="stopFlow()">No — stop here</button></div></div>`;
+}
+
+function nextStage(ci){
+  sp(ci,'done');document.getElementById(STAGES[ci].pid).className='pill '+STAGES[ci].pdn;
+  if(!terminated&&ci+1<STAGES.length)addCard(ci+1);
+  else if(ci===STAGES.length-1)completeWorkflow();
+}
+
+function stopFlow(){
+  terminated=true;
+  document.querySelectorAll('.stage-card').forEach(c=>{const cb=c.querySelector('[id^="cb-"]');if(cb&&cb.querySelector('[id^="cpbtn-"]'))c.remove()});
+  const b=document.createElement('div');b.className='stop-box';
+  b.innerHTML=`<strong>Stopped.</strong><p>Scroll up to review outputs so far, or start fresh below.</p><button class="btn-reset-muted" onclick="resetAll()"><span class="reset-icon">↺</span> Start a new application</button>`;
+  document.getElementById('stagesArea').appendChild(b);b.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function completeWorkflow(){
+  STAGES.forEach((s,i)=>{sp(i,'done');document.getElementById(s.pid).className='pill p-done'});
+  setTimeout(()=>{
+    const b=document.createElement('div');b.className='done-box';
+    b.innerHTML=`<strong>Application package complete ✓</strong><p>All four stages done. Use the Skills Intelligence Report to plan your next certification or project. Ready for a new role? Hit reset to start fresh.</p><button class="btn-reset" onclick="resetAll()"><span class="reset-icon">↺</span> Reset — new application</button>`;
+    document.getElementById('stagesArea').appendChild(b);b.scrollIntoView({behavior:'smooth',block:'start'});
+  },600);
+}
+
+function start(){
+  resumeText=document.getElementById('resumeInput').value.trim();
+  jdText=document.getElementById('jdInput').value.trim();
+  document.getElementById('errBar').classList.remove('on');
+  if(!resumeText||resumeText.length<80){showErr('Resume looks too short — paste your full resume.');return}
+  if(!jdText||jdText.length<80){showErr('Job description looks too short.');return}
+  inputMode=detectMode(resumeText);
+  document.getElementById('resumeInput').disabled=true;
+  document.getElementById('jdInput').disabled=true;
+  document.getElementById('startBtn').disabled=true;
+  document.getElementById('progWrap').style.display='block';
+  document.getElementById('stagesArea').innerHTML='';
+  terminated=false;addCard(0);
+}
+</script>

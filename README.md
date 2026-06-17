@@ -246,6 +246,7 @@ The **Copy clubbed LaTeX** button provides the post-clubbing source ready for Ov
 **End states:** Both the Complete and Stopped states show a Reset button (↺ icon, rotates on hover). Clicking Reset clears both input fields, re-enables them, resets all progress indicators to idle, clears the stages area, and scrolls back to the top — ready for a new application without refreshing the page or scrolling through chat history.
 
 ---
+
 ```
 
 ## Contributing
